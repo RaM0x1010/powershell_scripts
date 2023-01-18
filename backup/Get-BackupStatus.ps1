@@ -21,4 +21,4 @@
    # Highlight a range of days.
    Show-Calendar -HighlightDay (1..10 + 22) -HighlightDate "December 25, 2008"
 #>
-
+Import-Module -Name ./modules/PSGetInfoVeeamBackupJobs/PSGetInfoVeeamBackupJobs.psm1
