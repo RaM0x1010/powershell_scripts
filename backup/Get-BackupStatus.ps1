@@ -22,9 +22,13 @@
    Show-Calendar -HighlightDay (1..10 + 22) -HighlightDate "December 25, 2008"
 #>
 
-#Import-Module -Name .\modules\PSGetInfoVeeamBackupJobs\PSGetInfoVeeamBackupJobs.psm1
+Import-Module -Name .\modules\PSGetInfoVeeamBackupJobs\PSGetInfoVeeamBackupJobs.psm1
 ##Import-Module -Name .\modules\PSGetInfoMSSQLTasks\PSGetInfoMSSQLTasks.psm1
 #Import-Module -Name .\modules\PSGetInfoPostgreSQLTasks\PSGetInfoPostgreSQLTasks.psm1
+# $Servers = @("spb-buh-bkp-3","r-bkp")
+# foreach($server in $Servers){
+#   Get-BackupsLastStatuses -Server $server >> c:\temp\statuses.txt
+# }
 
 function Get-BackupsLastStatuses {
   [CmdletBinding()]
@@ -45,6 +49,14 @@ function Get-BackupsLastStatuses {
       return $("Error")
   }  
 }
+
+
+
+$info_about_backup = Get-Content -Path "C:\Users\r.mirzaliev\Desktop\domovoy_gips_match_location_notation.json" | ConvertFrom-Json
+
+$test1 = $info_about_backup.gips
+$test1
+
 
 
 $servers = @("spb-buh-bkp-3","r-bkp")
