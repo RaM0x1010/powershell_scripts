@@ -51,14 +51,6 @@ function Get-BackupsLastStatuses {
 }
 
 
-
-$info_about_backup = Get-Content -Path "C:\Users\r.mirzaliev\Desktop\domovoy_gips_match_location_notation.json" | ConvertFrom-Json
-
-$test1 = $info_about_backup.gips
-$test1
-
-
-
 $servers = @("spb-buh-bkp-3","r-bkp")
                 
     $result += [PSCustomObject]@{
