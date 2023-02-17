@@ -16,11 +16,6 @@ An example
 General notes
 #>
 
-# Map disk to the system and unmap disk from the system by flag
-
-
-# Get object property name 
-
 function Get-ObjectPropertyName {
     [CmdletBinding()]
 
@@ -31,9 +26,6 @@ function Get-ObjectPropertyName {
     return ($object_property | Get-Member -MemberType NoteProperty | Select-Object -ExpandProperty Name)
 }
 
-
-# some explanetion
-
 function Get-JSONCredentialsData {
     [CmdletBinding()]
 
@@ -41,7 +33,6 @@ function Get-JSONCredentialsData {
         [string]$PathToFile
     )
 
-    #$PathToFile = "C:\Users\r.mirzaliev\Desktop\shared_folders_credentials.json"
     $credential_json_data = Get-Content $PathToFile -Raw | ConvertFrom-Json
     $result = @()
         
@@ -80,11 +71,11 @@ function Get-JSONGipData {
                     $result += [PSCustomObject]@{
                         LocationPrefix = $op_obj.prefix
                         GIPName        = $op_obj.name
-                        ServerName     = $item.server
+                        ServerName     = $item.backup_info.server
                         ServiceName    = $item.backup_info.name
-                        Method         = $item.method
+                        Method         = $item.backup_info.method
                         PathToBackup   = $item.backup_info.path
-                        CredsIndex     = $item.credentials                        
+                        CredsIndex     = $item.backup_info.credentials                        
                     }                
                 }
             }
@@ -95,35 +86,69 @@ function Get-JSONGipData {
 
 }
 
-# Get rec
-
-function Connect-SharedFolder {
+function Get-FileBackupStatus {
     [CmdletBinding()]
 
-    param (
-        [char]$DriveLetter = 'L',
-        [string]$PathToSharedFolder,
-        [securestring]$Credentials
+    param (        
+        [System.Object[]]$JSONGipData,
+        [PSCredential[]]$FolderCreds
     )
+    
+    $result = @()
+    $regex = "shop"
 
+    try {
+        foreach($gip in $JSONGipData){
+            if(-not (Test-Path -Path $($gip.LocationPrefix + ":"))){          
+              $shared_folder = New-PSDrive -Name $gip.LocationPrefix -PSProvider FileSystem -Root $gip.PathToBackup -Credential $creds_array[$gip.CredsIndex].Credential
+              $newest_file_in_folder = Get-ChildItem -File -LiteralPath $($shared_folder.Name + ":") | Where-Object {$_.Name -match $regex} | Sort-Object -Property CreationTime -Descending | Select-Object Name, CreationTime -First 1              
+              $result_object = [PSCustomObject]@{
+                ServerName  = $gip.ServerName;
+                TaskName    = $gip.ServiceName;
+                BackupType  = $gip.Method;
+                Location    = $gip.PathToBackup;
+                CreatedTime = '{0:dd.MM.yyyy}' -f $newest_file_in_folder.CreationTime;
+                Status      = "";
+              }
 
-    New-PSDrive -Name $DriveLetter -PSProvider "FileSystem" -Root $PathToSharedFolder -Credential $Credentials -Persist
+              if($newest_file_in_folder.CreationTime -ge (Get-Date).AddHours(-24)){            
+                $result_object.Status = "OK"
+              }else{
+                $result_object.Status = "Error"
+              }
 
+              $result += $result_object
+
+            }else{
+
+                $newest_file_in_folder = Get-ChildItem -File -LiteralPath $($shared_folder.Name + ":") | Where-Object {$_.Name -match $regex} | Sort-Object -Property CreationTime -Descending | Select-Object Name, CreationTime -First 1              
+                $result_object = [PSCustomObject]@{
+                    ServerName  = $gip.ServerName;
+                    TaskName    = $gip.ServiceName;
+                    BackupType  = $gip.Method;
+                    Location    = $gip.PathToBackup;
+                    CreatedTime = '{0:dd.MM.yyyy}' -f $newest_file_in_folder.CreationTime;
+                    Status      = "";
+                }
+
+                if($newest_file_in_folder.CreationTime -ge (Get-Date).AddHours(-24)){            
+                    $result_object.Status = "OK"
+                }else{
+                    $result_object.Status = "Error"
+                }
+
+                $result += $result_object
+            }
+        }
+        return $result
+    }
+    catch {
+        $result += [PSCustomObject]@{
+            Error = "Error"
+            Message = $_
+        }
+        return $result
+    }
 }
 
 
-
-function Disconnect-SharedFolder {
-    [CmdletBinding()]
-
-    param (
-        [string]$PathToSharedFolder
-    )
-
-    ## split $PathToSharedFolder and get server name then replace with match in expression
-    $ex_shared_folder = $PathToSharedFolder.Split("\")[2]
-
-    Get-PSDrive | Where-Object {$_.DisplayRoot -match $ex_shared_folder} | Remove-PSDrive
-    Get-SmbMapping | Where-Object {$_.RemotePath -match $ex_shared_folder} | Remove-SmbMapping -Force
-
-}

@@ -22,76 +22,50 @@
    Show-Calendar -HighlightDay (1..10 + 22) -HighlightDate "December 25, 2008"
 #>
 
+
 Import-Module -Name .\modules\PSGetInfoVeeamBackupJobs\PSGetInfoVeeamBackupJobs.psm1
-##Import-Module -Name .\modules\PSGetInfoMSSQLTasks\PSGetInfoMSSQLTasks.psm1
-#Import-Module -Name .\modules\PSGetInfoPostgreSQLTasks\PSGetInfoPostgreSQLTasks.psm1
-# $Servers = @("spb-buh-bkp-3","r-bkp")
-# foreach($server in $Servers){
-#   Get-BackupsLastStatuses -Server $server >> c:\temp\statuses.txt
+Import-Module -Name .\modules\PSGetInfoSQLTasksAndFiles\PSGetInfoSQLTasksAndFiles.psm1
+
+$folder_creds = "C:\Users\r.mirzaliev\Desktop\shared_folders_credentials.json"
+$json_gip_data = "C:\Users\r.mirzaliev\Desktop\domovoy_gips_match_location_notation.json"
+
+$creds_array = Get-JSONCredentialsData($folder_creds)
+$gips_data = Get-JSONGipData($json_gip_data)
+
+# ########## checklist in txt
+# $servers = @("spb-buh-bkp-3","r-bkp")
+# $result = @()
+
+# foreach($server in $servers){
+#   $result += Get-BackupsLastStatuses($server)
 # }
 
-function Get-BackupsLastStatuses {
-  [CmdletBinding()]
 
-  Param(
-      [string[]]$Server = "localhost"
-  )
-  
+# $result | Out-File -FilePath "C:\temp\statuses_$(Get-Date -Format "dd-MM-yyyy").txt"
 
-  $result = @()
-  
-  try {
-      $script_path = ".\backup\Get-BackupsLastStatuses.ps1"
-      $result = Invoke-Command -ComputerName $Server -FilePath $script_path
-      return $result
-  }
-  catch {
-      return $("Error")
-  }  
+
+### test creating report
+
+# $Header = @"
+# <style>
+# TABLE {border-width: 1px; border-style: solid; border-color: black; border-collapse: collapse;}
+# TD {border-width: 1px; padding: 3px; border-style: solid; border-color: black;}
+# </style>
+# "@
+
+# $result[0] | ConvertTo-Html -Property JobName, VMName, BackupEndTimeLocal, LastStatus -Head $Header | Out-File -FilePath C:\temp\1.html
+
+# Check Veeam backup statuses
+
+$veeam_servers = @("spb-buh-bkp-3","r-bkp")
+$result_veeam_backups = @()
+
+foreach($server in $servers){
+  $result_veeam_backups += Get-BackupsLastStatuses($veeam_servers)
 }
 
+# Check files on shared folders 
 
-$servers = @("spb-buh-bkp-3","r-bkp")
-                
-    $result += [PSCustomObject]@{
-                    shop = $op.name;
-                  server = "-";
-                    name = "-";
-                    path = "-";
-                  status = "-";
-                message = "-";
-            }
+$file_status_backup = Get-FileBackupStatus -JSONGipData $gips_data -FolderCreds $creds_array
 
-    # foreach($srv in $servers){
-    #     $statuses = checkVeeamBackups -Server $srv
-    #     $statuses.Length
-    # }
-
-    foreach($srv in $servers){
-        $statuses = checkVeeamBackups -Server $srv                    
-        if($statuses.Length){                        
-        for ($i = 0; $i -lt $statuses[1].Count; $i++) {
-            
-            $result += [PSCustomObject]@{
-                        shop = $srv;
-                      server = $statuses[1][$i].OrigJobName;
-                        name = $statuses[1][$i].JobType;                                   
-                        path = $("DR Site");#"$($statuses[1][$i].GetJob().TargetDir.ToString())";
-                      status = $statuses[1][$i].Result;
-                    message = $statuses[1][$i].EndTimeUTC;
-                }
-        }
-        for ($i = 0; $i -lt $statuses[0].Count; $i++){
-            if($statuses[0][$i].Name -eq "r-fs-1"){
-                $result += [PSCustomObject]@{
-                        shop = $srv;
-                      server = $statuses[0][$i].Name;
-                        name = $statuses[0][$i].JobType;
-                        path = [string]$statuses[0][$i].TargetDir;
-                      status = $("ok");#$statuses[0][$i].GetLastResult();
-                    message = $("none");#$statuses[0][$i].GetLastBackup().LastPointCreationTime.ToString(); #"test";
-              }
-            }
-        }
-    }else{$("Current length is " + $statuses.Length)}
-}
+#Check hyper-v replication
