@@ -42,30 +42,39 @@ $gips_data = Get-JSONGipData($json_gip_data)
 
 
 # $result | Out-File -FilePath "C:\temp\statuses_$(Get-Date -Format "dd-MM-yyyy").txt"
+# $result | ConvertTo-Html | Out-File -FilePath "C:\temp\statuses_$(Get-Date -Format "dd-MM-yyyy").txt"
 
 
-### test creating report
 
-# $Header = @"
-# <style>
-# TABLE {border-width: 1px; border-style: solid; border-color: black; border-collapse: collapse;}
-# TD {border-width: 1px; padding: 3px; border-style: solid; border-color: black;}
-# </style>
-# "@
 
-# $result[0] | ConvertTo-Html -Property JobName, VMName, BackupEndTimeLocal, LastStatus -Head $Header | Out-File -FilePath C:\temp\1.html
 
 # Check Veeam backup statuses
 
 $veeam_servers = @("spb-buh-bkp-3","r-bkp")
 $result_veeam_backups = @()
 
-foreach($server in $servers){
-  $result_veeam_backups += Get-BackupsLastStatuses($veeam_servers)
+foreach($server in $veeam_servers){
+  $result_veeam_backups += Get-BackupsLastStatuses -Server $server
 }
 
-# Check files on shared folders 
 
+# Check files on shared folders
 $file_status_backup = Get-FileBackupStatus -JSONGipData $gips_data -FolderCreds $creds_array
 
 #Check hyper-v replication
+
+Out-HTMLCheckList -BackupStatuses @($result_veeam_backups, $file_status_backup)
+
+# $test_one = $result_veeam_backups + $file_status_backup
+
+#$test_one | Where-Object {$_.TaskName -eq "backup"}
+
+$file_status_backup_test = $test_one | Select-Object @{N='Сервер'; E={$_.ServerName}},@{N='Имя задания'; E={$_.TaskName}},@{N='Тип резервной копии'; E={$_.BackupMethod}},@{N='Место хранения'; E={$_.PathToBackup}},@{N='Время создания'; E={$_.TimeStamp}},@{N='Статус'; E={$_.Status}}
+$file_status_backup_test | ConvertTo-Html | Out-File C:\temp\7.html
+
+# test
+
+$html = ConvertTo-Html -Body "$result_veeam_backups $file_status_backup"
+$html | Out-File C:\temp\2.html
+
+# test

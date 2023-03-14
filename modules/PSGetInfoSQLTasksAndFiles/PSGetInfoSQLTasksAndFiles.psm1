@@ -95,7 +95,7 @@ function Get-FileBackupStatus {
     )
     
     $result = @()
-    $regex = "shop"
+    $regex = "(shop|wms)"
 
     try {
         foreach($gip in $JSONGipData){
@@ -103,40 +103,36 @@ function Get-FileBackupStatus {
               $shared_folder = New-PSDrive -Name $gip.LocationPrefix -PSProvider FileSystem -Root $gip.PathToBackup -Credential $creds_array[$gip.CredsIndex].Credential
               $newest_file_in_folder = Get-ChildItem -File -LiteralPath $($shared_folder.Name + ":") | Where-Object {$_.Name -match $regex} | Sort-Object -Property CreationTime -Descending | Select-Object Name, CreationTime -First 1              
               $result_object = [PSCustomObject]@{
-                ServerName  = $gip.ServerName;
-                TaskName    = $gip.ServiceName;
-                BackupType  = $gip.Method;
-                Location    = $gip.PathToBackup;
-                CreatedTime = '{0:dd.MM.yyyy}' -f $newest_file_in_folder.CreationTime;
-                Status      = "";
+                ServerName   = $gip.ServerName;
+                TaskName     = "backup";
+                BackupMethod = $gip.Method;
+                PathToBackup = $gip.PathToBackup;
+                #TimeStamp    = '{0:dd.MM.yyyy}' -f $newest_file_in_folder.CreationTime;
+                TimeStamp    = $newest_file_in_folder.CreationTime;
+                Status       = "";
               }
-
               if($newest_file_in_folder.CreationTime -ge (Get-Date).AddHours(-24)){            
-                $result_object.Status = "OK"
+                $result_object.Status = "Success"
               }else{
                 $result_object.Status = "Error"
               }
-
               $result += $result_object
-
             }else{
-
-                $newest_file_in_folder = Get-ChildItem -File -LiteralPath $($shared_folder.Name + ":") | Where-Object {$_.Name -match $regex} | Sort-Object -Property CreationTime -Descending | Select-Object Name, CreationTime -First 1              
+                $newest_file_in_folder = Get-ChildItem -File -LiteralPath $($gip.LocationPrefix + ":") | Where-Object {$_.Name -match $regex} | Sort-Object -Property CreationTime -Descending | Select-Object Name, CreationTime -First 1              
                 $result_object = [PSCustomObject]@{
-                    ServerName  = $gip.ServerName;
-                    TaskName    = $gip.ServiceName;
-                    BackupType  = $gip.Method;
-                    Location    = $gip.PathToBackup;
-                    CreatedTime = '{0:dd.MM.yyyy}' -f $newest_file_in_folder.CreationTime;
-                    Status      = "";
+                    ServerName   = $gip.ServerName;
+                    TaskName     = "backup";
+                    BackupMethod = $gip.Method;
+                    PathToBackup = $gip.PathToBackup;
+                    #TimeStamp    = '{0:dd.MM.yyyy}' -f $newest_file_in_folder.CreationTime;
+                    TimeStamp    = $newest_file_in_folder.CreationTime;
+                    Status       = "";
                 }
-
-                if($newest_file_in_folder.CreationTime -ge (Get-Date).AddHours(-24)){            
-                    $result_object.Status = "OK"
+                if($newest_file_in_folder.CreationTime -ge (Get-Date).AddSeconds(-86399)){            
+                    $result_object.Status = "Success"
                 }else{
                     $result_object.Status = "Error"
                 }
-
                 $result += $result_object
             }
         }
