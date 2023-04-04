@@ -74,6 +74,7 @@ function Get-JSONGipData {
                         ServerName     = $item.backup_info.server
                         ServiceName    = $item.backup_info.name
                         Method         = $item.backup_info.method
+                        PathToMount    = $item.backup_info.unc_path
                         PathToBackup   = $item.backup_info.path
                         CredsIndex     = $item.backup_info.credentials                        
                     }                
@@ -91,40 +92,38 @@ function Get-FileBackupStatus {
 
     param (        
         [System.Object[]]$JSONGipData,
-        [PSCredential[]]$FolderCreds
+        [PSCustomObject[]]$FolderCreds
     )
     
     $result = @()
     $regex = "(shop|wms)"
-
-    try {
-        foreach($gip in $JSONGipData){
-            if(-not (Test-Path -Path $($gip.LocationPrefix + ":"))){          
-              $shared_folder = New-PSDrive -Name $gip.LocationPrefix -PSProvider FileSystem -Root $gip.PathToBackup -Credential $creds_array[$gip.CredsIndex].Credential
-              $newest_file_in_folder = Get-ChildItem -File -LiteralPath $($shared_folder.Name + ":") | Where-Object {$_.Name -match $regex} | Sort-Object -Property CreationTime -Descending | Select-Object Name, CreationTime -First 1              
-              $result_object = [PSCustomObject]@{
-                ServerName   = $gip.ServerName;
-                TaskName     = "backup";
-                BackupMethod = $gip.Method;
-                PathToBackup = $gip.PathToBackup;
-                #TimeStamp    = '{0:dd.MM.yyyy}' -f $newest_file_in_folder.CreationTime;
-                TimeStamp    = $newest_file_in_folder.CreationTime;
-                Status       = "";
-              }
-              if($newest_file_in_folder.CreationTime -ge (Get-Date).AddHours(-24)){            
+    
+    foreach($gip in $JSONGipData){
+        try {
+            if(-not (Test-Path -Path $($gip.LocationPrefix + ":"))){
+                New-PSDrive -Name $gip.LocationPrefix -PSProvider "FileSystem" -Root $gip.PathToMount -Credential $FolderCreds[$gip.CredsIndex].Credential | Out-Null
+                $newest_file_in_folder = Get-ChildItem -File -LiteralPath $gip.PathToBackup | Where-Object {$_.Name -match $regex} | Sort-Object -Property CreationTime -Descending | Select-Object Name, CreationTime -First 1
+                $result_object = [PSCustomObject]@{
+                    ServerName   = $gip.ServerName;
+                    TaskName     = "backup";
+                    BackupMethod = $gip.Method;
+                    PathToBackup = $gip.PathToBackup;
+                    TimeStamp    = $newest_file_in_folder.CreationTime;
+                    Status       = "";
+                }
+            if($newest_file_in_folder.CreationTime -ge (Get-Date).AddSeconds(-86399)){            
                 $result_object.Status = "Success"
-              }else{
+            }else{
                 $result_object.Status = "Error"
-              }
-              $result += $result_object
+            }
+                $result += $result_object
             }else{
                 $newest_file_in_folder = Get-ChildItem -File -LiteralPath $($gip.LocationPrefix + ":") | Where-Object {$_.Name -match $regex} | Sort-Object -Property CreationTime -Descending | Select-Object Name, CreationTime -First 1              
                 $result_object = [PSCustomObject]@{
                     ServerName   = $gip.ServerName;
                     TaskName     = "backup";
                     BackupMethod = $gip.Method;
-                    PathToBackup = $gip.PathToBackup;
-                    #TimeStamp    = '{0:dd.MM.yyyy}' -f $newest_file_in_folder.CreationTime;
+                    PathToBackup = $gip.PathToBackup;                    
                     TimeStamp    = $newest_file_in_folder.CreationTime;
                     Status       = "";
                 }
@@ -136,15 +135,17 @@ function Get-FileBackupStatus {
                 $result += $result_object
             }
         }
-        return $result
-    }
-    catch {
-        $result += [PSCustomObject]@{
-            Error = "Error"
-            Message = $_
+        catch {
+            $Error[0].Exception.Message | Out-File "C:\temp\logs\mes_$($(Get-Date -UFormat "%d-%m-%Y %R").Replace(':','_')).log"
+            $result += [PSCustomObject]@{
+                ServerName   = $gip.ServerName;;
+                TaskName     = "backup";
+                BackupMethod = "-";
+                PathToBackup = $gip.PathToBackup;
+                TimeStamp    = "-";
+                Status       = $Error[0].Exception.Message;
+            }
         }
-        return $result
     }
+    return $result
 }
-
-

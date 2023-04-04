@@ -39,7 +39,7 @@ function Get-BackupsLastStatuses {
                                 BackupMethod = "Veeam BackupJob";
                                 PathToBackup = $repo_name.Name;
                                 TimeStamp    = $task_session.Info.Progress.StopTimeLocal;
-                                Status       = $task_session.Status;
+                                Status       = [String]$task_session.Status;
                             }
                         }
 
@@ -54,7 +54,7 @@ function Get-BackupsLastStatuses {
                                 BackupMethod = "Veeam Backup Copy Job";
                                 PathToBackup = $repo_backup_copy_job.Name;
                                 TimeStamp    = $last_status_backup_copy_job.Info.Progress.StopTimeLocal;
-                                Status       = $last_status_backup_copy_job.Result;
+                                Status       = [String]$last_status_backup_copy_job.Result;
                             }
                         }else{
                             $last_status_backup_copy_job = ($all_sessions | Where-Object {$backup_job.Id -eq $_.JobId} | Sort-Object -Property EndTimeUTC -Descending)[1]
@@ -65,7 +65,7 @@ function Get-BackupsLastStatuses {
                                 BackupMethod = "Veeam Backup Copy Job";
                                 PathToBackup = $repo_backup_copy_job.Name;
                                 TimeStamp    = $last_status_backup_copy_job.Info.Progress.StopTimeLocal;
-                                Status       = $last_status_backup_copy_job.Result;
+                                Status       = [String]$last_status_backup_copy_job.Result;
                             }
                         }
                     }
