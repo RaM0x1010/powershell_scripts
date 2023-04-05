@@ -22,17 +22,40 @@
    Show-Calendar -HighlightDay (1..10 + 22) -HighlightDate "December 25, 2008"
 #>
 
+###################
+## Test purposes ##
+###################
+
+# Import-Module -Name .\modules\PSGetInfoVeeamBackupJobs\PSGetInfoVeeamBackupJobs.psm1
+# Import-Module -Name .\modules\PSGetInfoSQLTasksAndFiles\PSGetInfoSQLTasksAndFiles.psm1
+# Import-Module -Name .\modules\PSOutputToFile\PSOutputToFile.psm1
+
+# $result_veeam_backups = @()
+
+# $folder_creds = "C:\Users\r.mirzaliev\Desktop\shared_folders_credentials.json"
+# $json_gip_data = "C:\Users\r.mirzaliev\Desktop\domovoy_gips_match_location_notation.json"
+
+# $SendEMail = $true
+# $ReportLocation = "C:\temp"
+
+# $creds_array = Get-JSONCredentialsData($folder_creds)
+# $gips_data = Get-JSONGipData($json_gip_data)
+
+
+[CmdletBinding()]
+param (
+    [string]$JSONFolderCreds,
+    [string]$JSONGipsData,
+    [string]$ReportLocation,
+    [bool]$SendEMail = $false
+)
 
 Import-Module -Name .\modules\PSGetInfoVeeamBackupJobs\PSGetInfoVeeamBackupJobs.psm1
 Import-Module -Name .\modules\PSGetInfoSQLTasksAndFiles\PSGetInfoSQLTasksAndFiles.psm1
 Import-Module -Name .\modules\PSOutputToFile\PSOutputToFile.psm1
 
-$result_veeam_backups = @()
-$folder_creds = "C:\Users\r.mirzaliev\Desktop\shared_folders_credentials.json"
-$json_gip_data = "C:\Users\r.mirzaliev\Desktop\domovoy_gips_match_location_notation.json"
-
-$creds_array = Get-JSONCredentialsData($folder_creds)
-$gips_data = Get-JSONGipData($json_gip_data)
+$creds_array = Get-JSONCredentialsData($JSONFolderCreds)
+$gips_data = Get-JSONGipData($JSONGipsData)
 
 $veeam_servers = @("spb-buh-bkp-3","r-bkp-3")
 
@@ -46,4 +69,4 @@ $file_status_backup = Get-FileBackupStatus -JSONGipData $gips_data -FolderCreds 
 
 #Check hyper-v replication
 
-Out-HTMLCheckList -BackupStatuses @($result_veeam_backups, $file_status_backup)
+Out-HTMLCheckList -SendEMail $SendEMail -ReportLocation $ReportLocation -BackupStatuses @($result_veeam_backups, $file_status_backup)
