@@ -34,11 +34,6 @@ $json_gip_data = "C:\Users\r.mirzaliev\Desktop\domovoy_gips_match_location_notat
 $creds_array = Get-JSONCredentialsData($folder_creds)
 $gips_data = Get-JSONGipData($json_gip_data)
 
-# $creds_array.GetType()
-# [PSCustomObject[]]$test1 = $creds_array
-# $test1
-# Check Veeam backup statuses
-
 $veeam_servers = @("spb-buh-bkp-3","r-bkp-3")
 
 foreach($server in $veeam_servers){
