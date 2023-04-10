@@ -25,7 +25,7 @@ function Get-BackupsLastStatuses {
             foreach($backup_job in $all_jobs){
                 Switch ($backup_job.JobType){
                     "Backup"{
-                        $task_session_info = Get-VBRTaskSession -Session $($all_sessions | Where-Object {$backup_job.Id -eq $_.JobId} | Sort-Object -Property EndTimeUTC -Descending | Select-Object -First 1).OriginalSessionId
+                        $task_session_info = Get-VBRTaskSession -Session $($all_sessions | Where-Object {$backup_job.Id -eq $_.JobId} | Sort-Object -Property EndTimeUTC -Descending | Select-Object -First 1).Id
                         foreach($task_session in $task_session_info){
                             
                             ## change to backup_job.JobName
